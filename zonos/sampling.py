@@ -1,4 +1,5 @@
 import torch
+from typing import Optional
 
 
 def multinomial(input: torch.Tensor, num_samples: int, replacement=False, *, generator=None):
@@ -123,7 +124,7 @@ def sample_from_logits(
     linear: float = 0.0,
     conf: float = 0.0,
     quad: float = 0.0,
-    generated_tokens: torch.Tensor | None = None,
+    generated_tokens: Optional[torch.Tensor] = None,
     repetition_penalty: float = 3.0,
     repetition_penalty_window: int = 2,
 ) -> torch.Tensor:

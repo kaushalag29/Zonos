@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Union
 
 
 def find_multiple(n: int, k: int) -> int:
@@ -9,7 +10,7 @@ def find_multiple(n: int, k: int) -> int:
     return n + k - (n % k)
 
 
-def pad_weight_(w: nn.Embedding | nn.Linear, multiple: int):
+def pad_weight_(w: Union[nn.Embedding, nn.Linear], multiple: int):
     """Pad the weight of an embedding or linear layer to a multiple of `multiple`."""
     if isinstance(w, nn.Embedding):
         # Pad input dim

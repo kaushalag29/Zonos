@@ -1,5 +1,5 @@
 from functools import cache
-from typing import Any, Literal, Iterable
+from typing import Any, Literal, Iterable, Union, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -13,7 +13,7 @@ class Conditioner(nn.Module):
         self,
         output_dim: int,
         name: str,
-        cond_dim: int | None = None,
+        cond_dim: Optional[int] = None,
         projection: Literal["none", "linear", "mlp"] = "none",
         uncond_type: Literal["learned", "none"] = "none",
         **kwargs,
@@ -41,7 +41,7 @@ class Conditioner(nn.Module):
     def apply_cond(self, *inputs: Any) -> torch.Tensor:
         raise NotImplementedError()
 
-    def forward(self, inputs: tuple[Any, ...] | None) -> torch.Tensor:
+    def forward(self, inputs: Union[Tuple[Any, ...], None]) -> torch.Tensor:
         if inputs is None:
             assert self.uncond_vector is not None
             return self.uncond_vector.data.view(1, 1, -1)
@@ -330,7 +330,7 @@ supported_language_codes = [
 def make_cond_dict(
     text: str = "It would be nice to have time for testing, indeed.",
     language: str = "en-us",
-    speaker: torch.Tensor | None = None,
+    speaker: Optional[torch.Tensor] = None,
     emotion: list[float] = [0.3077, 0.0256, 0.0256, 0.0256, 0.0256, 0.0256, 0.2564, 0.3077],
     fmax: float = 22050.0,
     pitch_std: float = 20.0,
@@ -340,7 +340,7 @@ def make_cond_dict(
     dnsmos_ovrl: float = 4.0,
     speaker_noised: bool = False,
     unconditional_keys: Iterable[str] = {"vqscore_8", "dnsmos_ovrl"},
-    device: torch.device | str = DEFAULT_DEVICE,
+    device: Union[torch.device, str] = DEFAULT_DEVICE,
 ) -> dict:
     """
     A helper to build the 'cond_dict' that the model expects.

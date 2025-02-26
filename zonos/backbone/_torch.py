@@ -121,22 +121,35 @@ class Attention(nn.Module):
         kv_size = self.num_heads_kv * self.head_dim
         q, k, v = self.in_proj(x).split([q_size, kv_size, kv_size], dim=-1)
 
+        # Reshape to (batch_size, seq_len, num_heads, head_dim)
         q = q.view(batch_size, seqlen, self.num_heads, self.head_dim)
         k = k.view(batch_size, seqlen, self.num_heads_kv, self.head_dim)
         v = v.view(batch_size, seqlen, self.num_heads_kv, self.head_dim)
 
+        # Apply rotary embedding
         q = apply_rotary_emb(q, freqs_cis)
         k = apply_rotary_emb(k, freqs_cis)
 
+        # Update KV cache and extract updated k, v
         kv = _update_kv_cache(k, v, inference_params, self.layer_idx)
         k, v = kv.unbind(dim=-3)
 
+        # Expand `k` and `v` to match `q`'s head count if needed
+        if self.num_heads_kv < self.num_heads:
+            expand_factor = self.num_heads // self.num_heads_kv  # e.g., 16 // 4 = 4
+            k = k.repeat_interleave(expand_factor, dim=2)  # Expand along the num_heads dimension
+            v = v.repeat_interleave(expand_factor, dim=2)  # Expand along the num_heads dimension
+
+        # Transpose to (batch_size, num_heads, seq_len, head_dim) for attention
         q, k, v = map(lambda x: x.transpose(1, 2), (q, k, v))
 
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=seqlen > 1, enable_gqa=True)
+        # Compute scaled dot-product attention
+        y = F.scaled_dot_product_attention(q, k, v, is_causal=seqlen > 1)
 
+        # Restore shape to (batch_size, seq_len, embed_dim)
         y = y.transpose(1, 2).contiguous().view(batch_size, seqlen, q_size)
 
+        # Apply output projection
         y = self.out_proj(y)
         return y
 

@@ -1,5 +1,5 @@
 import json
-from typing import Callable
+from typing import Callable, Optional
 
 import safetensors
 import torch
@@ -56,7 +56,7 @@ class Zonos(nn.Module):
 
     @classmethod
     def from_pretrained(
-        cls, repo_id: str, revision: str | None = None, device: str = DEFAULT_DEVICE, **kwargs
+        cls, repo_id: str, revision: Optional[str] = None, device: str = DEFAULT_DEVICE, **kwargs
     ) -> "Zonos":
         config_path = hf_hub_download(repo_id=repo_id, filename="config.json", revision=revision)
         model_path = hf_hub_download(repo_id=repo_id, filename="model.safetensors", revision=revision)
@@ -64,7 +64,7 @@ class Zonos(nn.Module):
 
     @classmethod
     def from_local(
-        cls, config_path: str, model_path: str, device: str = DEFAULT_DEVICE, backbone: str | None = None
+        cls, config_path: str, model_path: str, device: str = DEFAULT_DEVICE, backbone: Optional[str] = None
     ) -> "Zonos":
         config = ZonosConfig.from_dict(json.load(open(config_path)))
         if backbone:
@@ -201,7 +201,7 @@ class Zonos(nn.Module):
         lengths_per_sample = torch.full((batch_size,), 0, dtype=torch.int32)
         return InferenceParams(max_seqlen, batch_size, 0, 0, key_value_memory_dict, lengths_per_sample)
 
-    def prepare_conditioning(self, cond_dict: dict, uncond_dict: dict | None = None) -> torch.Tensor:
+    def prepare_conditioning(self, cond_dict: dict, uncond_dict: Optional[dict] = None) -> torch.Tensor:
         if uncond_dict is None:
             uncond_dict = {k: cond_dict[k] for k in self.prefix_conditioner.required_keys}
         return torch.cat(
@@ -219,14 +219,14 @@ class Zonos(nn.Module):
     def generate(
         self,
         prefix_conditioning: torch.Tensor,  # [bsz, cond_seq_len, d_model]
-        audio_prefix_codes: torch.Tensor | None = None,  # [bsz, 9, prefix_audio_seq_len]
+        audio_prefix_codes: Optional[torch.Tensor] = None,  # [bsz, 9, prefix_audio_seq_len]
         max_new_tokens: int = 86 * 30,
         cfg_scale: float = 2.0,
         batch_size: int = 1,
         sampling_params: dict = dict(min_p=0.1),
         progress_bar: bool = True,
         disable_torch_compile: bool = False,
-        callback: Callable[[torch.Tensor, int, int], bool] | None = None,
+        callback: Optional[Callable[[torch.Tensor, int, int], bool]] = None,
     ):
         assert cfg_scale != 1, "TODO: add support for cfg_scale=1"
         prefix_audio_len = 0 if audio_prefix_codes is None else audio_prefix_codes.shape[2]
